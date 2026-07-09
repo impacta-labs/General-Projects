@@ -9,7 +9,7 @@ export default function SectionHeader({ label, meta, ruled = true }: SectionHead
     <div
       style={{
         paddingBottom: 10,
-        borderBottom: ruled ? '1px solid var(--stoa-rule)' : undefined,
+        borderBottom: ruled ? '1px solid var(--fos-rule)' : undefined,
         marginBottom: 0,
         display: 'flex',
         alignItems: 'baseline',
@@ -22,7 +22,7 @@ export default function SectionHeader({ label, meta, ruled = true }: SectionHead
           fontFamily: 'var(--font-sans)',
           fontSize: 11,
           fontWeight: 500,
-          color: 'var(--stoa-ink-3)',
+          color: 'var(--fos-ink-3)',
           letterSpacing: '0.09em',
           textTransform: 'uppercase' as const,
         }}
@@ -34,7 +34,7 @@ export default function SectionHeader({ label, meta, ruled = true }: SectionHead
           style={{
             fontFamily: 'var(--font-mono)',
             fontSize: 11,
-            color: 'var(--stoa-ink-3)',
+            color: 'var(--fos-ink-3)',
           }}
         >
           {meta}

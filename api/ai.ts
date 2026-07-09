@@ -1,6 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Vercel serverless function — req/res and model JSON are dynamic boundaries.
 import Anthropic from '@anthropic-ai/sdk'
 
 const client = new Anthropic()
+
+const MODEL = 'claude-haiku-4-5-20251001'
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
@@ -8,7 +12,7 @@ export default async function handler(req: any, res: any) {
     return
   }
 
-  const { action, params } = req.body
+  const { action, params } = req.body || {}
 
   if (!action || !params) {
     res.status(400).json({ error: 'Missing action or params' })
@@ -16,16 +20,49 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    if (action === 'generateDecision') {
-      const { titulo, tipo, orgName = 'la organización' } = params
+    if (action === 'coach') {
+      const { scenarioTitle, scenarioBrief, history = [], userText } = params
+
+      const transcript = (history as Array<{ role: string; text: string }>)
+        .map((t) => `${t.role === 'coach' ? 'Coach' : 'Founder'}: ${t.text}`)
+        .join('\n')
 
       const message = await client.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1600,
+        model: MODEL,
+        max_tokens: 1100,
+        system: `You are a calm, warm, world-class English speaking coach for a Spanish entrepreneur (a startup founder). The goal is NOT academic English — it is speaking clearly, naturally, calmly and confidently in real business situations: networking, meetings, pitches, public speaking, AI conversations and founder communication.
+
+Rules:
+- During the conversation you speak in SIMPLE, natural English. Short sentences. No jargon.
+- You explain the important correction in SPANISH (the founder's language), briefly and kindly.
+- You are encouraging but honest. Never harsh. Calm, like a private coach in a quiet room.
+- Correct only the ONE most important mistake per answer. If the answer is already good, mainMistake is "".
+- The "founderVersion" should sound like a confident founder — clear, calm, a little more powerful.
+- Keep "reply" natural: react to what they said AND keep the roleplay going with a follow-up question, staying in character for the scenario.`,
         messages: [
           {
             role: 'user',
-            content: `Eres un asesor estratégico senior y CFO interno de ${orgName}.\n\nLa organización está evaluando esta iniciativa:\nTítulo: "${titulo}"\nTipo: ${tipo}\n\nGenera en español:\n1. preguntaEstrategica: pregunta estratégica precisa (1 frase, termina en "?") que enmarca esto como una decisión, no una tarea.\n2. hipotesis: hipótesis de impacto (2-3 frases) con cambio medible y estimación económica concreta en euros.\n3. plLever: palanca de cuenta de explotación CON cuantificación en euros. Formato: descripción + cifra en €M. Obligatorio incluir cifra.\n4. indicadoresLideres: array de 3 indicadores tempranos concretos y medibles\n5. riesgoNoActuar: coste de oportunidad (2-3 frases, con cifra en €)\n6. casoInversion: caso de negocio con campos NUMÉRICOS en euros:\n   - costeProblemActual: € por año (coste de NO actuar)\n   - inversionRequerida: € total (capex + opex primer año)\n   - retornoEsperado: € por año (ahorro o ingreso incremental)\n   - confianza: "Bajo", "Medio", o "Alto"\n7. kpis: array de 2-3 indicadores CON PUENTE FINANCIERO. Para cada uno:\n   - nombre: nombre del KPI (corto, concreto)\n   - unidad: unidad de medida (ej: "semanas", "días", "%", "proyectos", "puntos NPS")\n   - baselineValor: valor actual (número)\n   - baselineEuroUnidad: cuántos € vale mejorar 1 unidad de este KPI (número entero, puede ser 0)\n   - objetivoValor: valor objetivo (número)\n   - deltaEuros: impacto financiero total estimado en € de alcanzar el objetivo (número entero positivo)\n   - fechaMedicion: cuándo se medirá (ej: "Q4 2026")\n   - responsable: quién mide (puede ser "")\n   Importante: el deltaEuros debe ser coherente con casoInversion.retornoEsperado. Los 2-3 KPIs deben explicar de dónde viene el retorno.\n\nResponde SOLO con JSON válido sin markdown:\n{"preguntaEstrategica":"...","hipotesis":"...","plLever":"...","indicadoresLideres":["...","...","..."],"riesgoNoActuar":"...","casoInversion":{"costeProblemActual":0,"inversionRequerida":0,"retornoEsperado":0,"confianza":"Medio"},"kpis":[{"nombre":"...","unidad":"...","baselineValor":0,"baselineEuroUnidad":0,"objetivoValor":0,"deltaEuros":0,"fechaMedicion":"...","responsable":""}]}`,
+            content: `Scenario: "${scenarioTitle}" — ${scenarioBrief}
+
+Conversation so far:
+${transcript || '(this is the founder\'s first answer)'}
+
+The founder just said:
+"${userText}"
+
+Coach this answer. Respond ONLY with valid JSON, no markdown:
+{
+  "reply": "natural English reply that reacts and asks a follow-up to keep practicing",
+  "mainMistake": "the single most important mistake in their words, or \\"\\" if none",
+  "naturalVersion": "a natural, correct version of what they tried to say",
+  "founderVersion": "a stronger, confident founder-level version",
+  "pronunciationTip": "one short pronunciation or rhythm tip relevant to their words",
+  "communicationTip": "one short delivery/communication tip (pace, pausing, tone, structure)",
+  "repeatInstruction": "one short sentence for them to repeat out loud",
+  "explanationEs": "brief, kind explanation IN SPANISH of the key correction (1-2 sentences)",
+  "phraseEnglish": "one useful English phrase from this exchange worth saving, or \\"\\"",
+  "phraseSpanish": "the Spanish meaning of that phrase, or \\"\\""
+}`,
           },
         ],
       })
@@ -35,157 +72,28 @@ export default async function handler(req: any, res: any) {
       return res.json({ success: true, data })
     }
 
-    if (action === 'generateCouncilSummary') {
-      const { decisions, sessionRef, date, orgName = 'la organización' } = params
+    if (action === 'scoreSession') {
+      const { scenarioTitle, history = [] } = params
 
-      const activas = decisions.filter(
-        (d: any) => d.status === 'evaluacion' || d.status === 'deliberando'
-      )
-      const resueltas = decisions.filter((d: any) => d.status === 'resuelta')
-
-      const activasSummary =
-        activas
-          .map(
-            (d: any) =>
-              `- ${d.id}: "${d.titulo}" | Responsable: ${d.owner || 'Sin asignar'} | Plazo: ${d.deadline || 'Sin definir'} | Hipótesis: ${d.businessImpact?.hypothesis?.slice(0, 120) || 'Sin hipótesis'}`
-          )
-          .join('\n') || 'Ninguna iniciativa activa'
-
-      const resueltasSummary =
-        resueltas
-          .map(
-            (d: any) =>
-              `- ${d.id}: "${d.titulo}" → Resolución: "${d.selectedVerdict}" | Predicción: "${d.prediccion || 'Sin predicción'}" | Revisión: ${d.businessImpact?.reviewHorizon}`
-          )
-          .join('\n') || 'Ninguna decisión resuelta en esta sesión'
+      const transcript = (history as Array<{ role: string; text: string }>)
+        .map((t) => `${t.role === 'coach' ? 'Coach' : 'Founder'}: ${t.text}`)
+        .join('\n')
 
       const message = await client.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 900,
+        model: MODEL,
+        max_tokens: 500,
+        system:
+          'You are an English speaking coach scoring a practice session for a Spanish startup founder. Score honestly from 1 to 10 (10 = near-native, confident founder). Be fair, not generous.',
         messages: [
           {
             role: 'user',
-            content: `Eres el secretario del Consejo de Innovación de ${orgName}. Redacta el resumen ejecutivo de la sesión ${sessionRef} celebrada el ${date}.\n\nIniciativas en seguimiento:\n${activasSummary}\n\nDecisiones resueltas en esta sesión:\n${resueltasSummary}\n\nEscribe un resumen ejecutivo formal en español (250-350 palabras) que:\n- Abra con el estado del portafolio en este consejo\n- Cubra cada iniciativa activa con su estado y responsable\n- Destaque las decisiones resueltas con su veredicto y predicción\n- Liste las 3 próximas acciones más importantes con responsables\n- Cierre con las fechas de revisión pendientes\n\nTono: actas formales de consejo. Prosa para la narrativa, bullets solo para acciones y revisiones.`,
-          },
-        ],
-      })
+            content: `Scenario: "${scenarioTitle}"
 
-      const text = message.content[0].type === 'text' ? message.content[0].text : ''
-      return res.json({ success: true, data: text })
-    }
+Full conversation:
+${transcript}
 
-    if (action === 'portfolioDiagnosis') {
-      const { decisions, orgName = 'la organización', sector = '' } = params
-
-      const activas = decisions.filter(
-        (d: any) => d.status === 'evaluacion' || d.status === 'deliberando'
-      )
-      const resueltas = decisions.filter((d: any) => d.status === 'resuelta')
-      const conHipotesis = decisions.filter((d: any) => d.businessImpact?.hypothesis?.trim()).length
-      const conPrediccion = resueltas.filter((d: any) => d.prediccion?.trim()).length
-      const tiposCount: Record<string, number> = {}
-      decisions.forEach((d: any) => {
-        tiposCount[d.tipoInnovacion] = (tiposCount[d.tipoInnovacion] || 0) + 1
-      })
-      const tiposResumen = Object.entries(tiposCount)
-        .map(([tipo, n]) => `${tipo}: ${n}`)
-        .join(', ')
-
-      // Aggregate financial data from structured business cases
-      const totalRetornoEsperado = activas.reduce((s: number, d: any) => s + (d.businessCase?.retornoEsperado ?? 0), 0)
-      const totalInversion = activas.reduce((s: number, d: any) => s + (d.businessCase?.inversionRequerida ?? 0), 0)
-      const sinCasoInversion = activas.filter((d: any) => !d.businessCase).length
-      const costInaccionTotal = activas.reduce((s: number, d: any) => s + (d.businessCase?.costeProblemActual ?? 0), 0)
-      const activasFinanciero = activas.map((d: any) =>
-        `"${d.titulo}" (${d.weight}) — retorno esperado: ${d.businessCase?.retornoEsperado ? `€${(d.businessCase.retornoEsperado/1000).toFixed(0)}k/año` : 'no cuantificado'} | payback: ${d.businessCase?.paybackMeses ?? '?'}m | confianza: ${d.businessCase?.confianza ?? '?'}`
-      ).join('\n')
-
-      const message = await client.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 700,
-        messages: [
-          {
-            role: 'user',
-            content: `Eres el CFO y asesor estratégico de ${orgName}${sector ? ` (${sector})` : ''}. Analiza el portfolio de decisiones de innovación con enfoque en impacto financiero.
-
-Portfolio actual:
-- Total decisiones: ${decisions.length} (${activas.length} activas, ${resueltas.length} resueltas)
-- Retorno esperado total portfolio activo: €${(totalRetornoEsperado/1000).toFixed(0)}k/año
-- Inversión total comprometida: €${(totalInversion/1000).toFixed(0)}k
-- Coste inacción total: €${(costInaccionTotal/1000).toFixed(0)}k/año
-- Sin caso de inversión estructurado: ${sinCasoInversion}/${activas.length} iniciativas activas
-- Con hipótesis medible: ${conHipotesis}/${decisions.length}
-- Tipos de innovación: ${tiposResumen || 'Sin datos'}
-
-Iniciativas activas con detalle financiero:
-${activasFinanciero || 'Ninguna'}
-
-Escribe el diagnóstico en español (150-200 palabras):
-1. Qué dice el portfolio sobre la capacidad de la organización para innovar con retorno medible (menciona los €)
-2. La decisión que más riesgo representa si no se resuelve pronto (con cifra de coste de inacción si disponible)
-3. La oportunidad financiera más relevante del portfolio
-4. La única acción concreta que el equipo directivo debe tomar esta semana
-
-Tono: CFO que habla a su board. Sin rodeos. Sin adornos. Con números.`,
-          },
-        ],
-      })
-
-      const text = message.content[0].type === 'text' ? message.content[0].text : ''
-      return res.json({ success: true, data: text })
-    }
-
-    if (action === 'challengeDecision') {
-      const { titulo, tipo, orgName = 'la organización', businessCase, kpis = [], hypothesis, riskOfInaction } = params
-
-      const bcLines = businessCase ? [
-        `Coste del problema actual: €${businessCase.costeProblemActual?.toLocaleString('es') ?? 'no definido'}/año`,
-        `Inversión requerida: €${businessCase.inversionRequerida?.toLocaleString('es') ?? 'no definida'} total`,
-        `Retorno esperado: €${businessCase.retornoEsperado?.toLocaleString('es') ?? 'no definido'}/año`,
-        `Payback estimado: ${businessCase.paybackMeses ?? '?'} meses`,
-        `Confianza: ${businessCase.confianza ?? 'no indicada'}`,
-      ].join('\n') : 'Caso de inversión no completado.'
-
-      const kpiLines = kpis.length > 0
-        ? kpis.map((k: any) =>
-            `· ${k.nombre}: ${k.baselineValor} → ${k.objetivoValor} ${k.unidad} | €${k.baselineEuroUnidad?.toLocaleString('es') ?? '?'}/unidad | Delta: €${k.deltaEuros?.toLocaleString('es') ?? '?'}`
-          ).join('\n')
-        : 'Sin KPIs definidos.'
-
-      const costInaction = businessCase?.costeProblemActual
-        ? `€${Math.round(businessCase.costeProblemActual / 12).toLocaleString('es')}/mes de coste de inacción (€${Math.round(businessCase.costeProblemActual / 52).toLocaleString('es')}/semana)`
-        : businessCase?.retornoEsperado
-        ? `€${Math.round(businessCase.retornoEsperado / 12).toLocaleString('es')}/mes de retorno diferido por cada mes que no se actúa`
-        : null
-
-      const message = await client.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 900,
-        messages: [
-          {
-            role: 'user',
-            content: `Eres el CFO interno de ${orgName}. Tu trabajo es cuestionar supuestos financieros ANTES de que lleguen al comité de dirección. No eres amable — eres riguroso.
-
-Decisión: "${titulo}" (${tipo})
-Hipótesis: ${hypothesis || 'No definida'}
-
-Caso de inversión:
-${bcLines}
-
-KPIs con puente financiero:
-${kpiLines}
-
-Riesgo de no actuar: ${riskOfInaction || 'No definido'}
-${costInaction ? `\nCoste calculado de inacción: ${costInaction}` : ''}
-
-Genera exactamente 4 observaciones como CFO. Para CADA UNA:
-- Sé específico: referencia los números concretos del caso
-- No hagas preguntas genéricas — pregunta algo que el director debe poder responder antes de ir al board
-- Alterna tipos: combina 'Riesgo', 'Pregunta pendiente', y 'Recomendación'
-- Máximo 2 frases por observación. Directo. Sin introducción.
-
-Responde SOLO con JSON válido:
-{"observaciones":[{"tipo":"Riesgo","texto":"..."},{"tipo":"Pregunta pendiente","texto":"..."},{"tipo":"Recomendación","texto":"..."},{"tipo":"Pregunta pendiente","texto":"..."}]}`,
+Score the founder's spoken English across these dimensions from 1 to 10. Respond ONLY with valid JSON:
+{"fluency":0,"clarity":0,"grammar":0,"vocabulary":0,"pronunciation":0,"confidence":0,"founderPresence":0}`,
           },
         ],
       })

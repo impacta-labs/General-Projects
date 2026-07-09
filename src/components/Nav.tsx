@@ -1,204 +1,112 @@
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { useIsMobile } from '../hooks/useViewport'
-import { useDecisionsStore } from '../store/decisions'
-import { useOrgStore } from '../store/org'
-import { useAuthStore } from '../store/auth'
-import { SUPABASE_ENABLED } from '../lib/supabase'
+import { useAppStore } from '../store/app'
+import Wordmark from './primitives/Wordmark'
 
 const SCREENS = [
-  { path: '/',             label: 'Dashboard',     short: 'DASH' },
-  { path: '/chamber',     label: 'Decisiones',    short: 'DEC'  },
-  { path: '/reading-room',label: 'Historial',     short: 'HIST' },
-  { path: '/council',     label: 'Sala de Reunión', short: 'REU' },
-  { path: '/weather',     label: 'Pulso org.',    short: 'PULSO'},
-  { path: '/horizon',     label: 'Compromisos',   short: 'COM'  },
+  { path: '/', label: 'Dashboard', short: 'HOME' },
+  { path: '/practice', label: 'Practice Room', short: 'PRACTICE' },
+  { path: '/scenarios', label: 'Scenarios', short: 'SCENES' },
+  { path: '/errors', label: 'Error Log', short: 'ERRORS' },
+  { path: '/phrases', label: 'Phrase Bank', short: 'PHRASES' },
+  { path: '/progress', label: 'Progress', short: 'PROGRESS' },
 ]
 
 export default function Nav() {
-  const location = useLocation()
   const isMobile = useIsMobile()
-  const { openCreateModal, decisions } = useDecisionsStore()
-  const { name: orgName, isConfigured, openSetup, openOnboarding } = useOrgStore()
-  const { signOut, user } = useAuthStore()
-  const today = new Date()
-  const sessionRef = `S-${String(today.getFullYear()).slice(2)}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`
+  const streak = useAppStore((s) => s.profile.currentStreak)
 
   return (
     <nav
       style={{
-        height: isMobile ? 44 : 48,
+        height: isMobile ? 46 : 52,
         display: 'flex',
         alignItems: 'stretch',
         justifyContent: 'space-between',
-        padding: isMobile ? '0 16px' : '0 40px',
-        borderBottom: '1px solid var(--stoa-rule)',
+        padding: isMobile ? '0 14px' : '0 32px',
+        borderBottom: '1px solid var(--fos-rule)',
         flexShrink: 0,
-        backgroundColor: 'var(--stoa-surface-1)',
+        backgroundColor: 'var(--fos-surface-1)',
         position: 'sticky',
         top: 0,
         zIndex: 100,
       }}
     >
-      {/* Wordmark */}
       <NavLink
         to="/"
         style={{
           textDecoration: 'none',
           display: 'flex',
           alignItems: 'center',
-          paddingRight: isMobile ? 12 : 32,
-          borderRight: '1px solid var(--stoa-rule)',
+          paddingRight: isMobile ? 12 : 28,
+          borderRight: isMobile ? 'none' : '1px solid var(--fos-rule)',
           flexShrink: 0,
         }}
       >
-        <span
-          style={{
-            fontFamily: 'var(--font-serif)',
-            fontSize: isMobile ? 13 : 14,
-            fontWeight: 400,
-            color: 'var(--stoa-ink)',
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase' as const,
-          }}
-        >
-          Stoa
-        </span>
+        <Wordmark size={isMobile ? 'sm' : 'md'} />
       </NavLink>
 
-      {/* Nav links */}
       <div
         style={{
           display: 'flex',
           alignItems: 'stretch',
           flex: 1,
-          overflowX: 'auto' as const,
-          scrollbarWidth: 'none' as const,
-          msOverflowStyle: 'none' as const,
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
         }}
       >
-        {SCREENS.map(({ path, label, short }) => {
-          const active = path === '/'
-            ? location.pathname === '/'
-            : location.pathname.startsWith(path)
-          return (
-            <NavLink
-              key={path}
-              to={path}
-              style={{
-                textDecoration: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                padding: isMobile ? '0 10px' : '0 14px',
-                fontFamily: 'var(--font-sans)',
-                fontSize: isMobile ? 11 : 12,
-                fontWeight: active ? 500 : 400,
-                color: active ? 'var(--stoa-ink)' : 'var(--stoa-ink-3)',
-                borderBottom: active ? '1px solid var(--stoa-gold)' : '1px solid transparent',
-                letterSpacing: '0.02em',
-                transition: 'color 0.15s ease, border-color 0.15s ease',
-                whiteSpace: 'nowrap' as const,
-                flexShrink: 0,
-              }}
-            >
-              {isMobile ? short : label}
-            </NavLink>
-          )
-        })}
+        {SCREENS.map(({ path, label, short }) => (
+          <NavLink
+            key={path}
+            to={path}
+            end={path === '/'}
+            style={({ isActive }) => ({
+              textDecoration: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              padding: isMobile ? '0 10px' : '0 15px',
+              fontFamily: 'var(--font-sans)',
+              fontSize: isMobile ? 11 : 12.5,
+              fontWeight: isActive ? 500 : 400,
+              color: isActive ? 'var(--fos-ink)' : 'var(--fos-ink-3)',
+              borderBottom: isActive ? '1px solid var(--fos-accent)' : '1px solid transparent',
+              letterSpacing: '0.01em',
+              transition: 'color 0.15s ease, border-color 0.15s ease',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            })}
+          >
+            {isMobile ? short : label}
+          </NavLink>
+        ))}
       </div>
 
-      {/* Right zone */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: isMobile ? 8 : 12,
-          paddingLeft: isMobile ? 8 : 16,
-          borderLeft: '1px solid var(--stoa-rule)',
-          flexShrink: 0,
-        }}
-      >
-        {/* Cómo funciona */}
-        {!isMobile && (
-          <button
-            onClick={openOnboarding}
-            title="Ver cómo funciona STOA"
-            style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: 11,
-              color: 'var(--stoa-ink-3)',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '0 4px',
-              letterSpacing: '0.02em',
-              flexShrink: 0,
-            }}
-          >
-            ¿Cómo funciona?
-          </button>
-        )}
-
-        {/* Nueva iniciativa */}
-        <button
-          onClick={openCreateModal}
+      {!isMobile && (
+        <div
           style={{
-            fontFamily: 'var(--font-sans)',
-            fontSize: 11,
-            fontWeight: 500,
-            color: 'var(--stoa-bg)',
-            backgroundColor: 'var(--stoa-gold)',
-            border: 'none',
-            padding: isMobile ? '4px 10px' : '5px 14px',
-            cursor: 'pointer',
-            letterSpacing: '0.02em',
-            whiteSpace: 'nowrap' as const,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            paddingLeft: 20,
+            borderLeft: '1px solid var(--fos-rule)',
             flexShrink: 0,
           }}
+          title="Your current streak"
         >
-          {isMobile ? '+' : '+ Nueva'}
-        </button>
-
-
-        {/* System state */}
-        {!isMobile && (
-          <>
-            <div style={{ width: 1, height: 12, backgroundColor: 'var(--stoa-rule-strong)' }} />
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--stoa-ink-3)', letterSpacing: '0.06em' }}>
-              {sessionRef}
-            </span>
-            <div style={{ width: 1, height: 12, backgroundColor: 'var(--stoa-rule-strong)' }} />
-            <button
-              onClick={openSetup}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', flexDirection: 'column' as const, gap: 1 }}
-              title="Configurar organización"
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <div style={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: isConfigured ? 'var(--stoa-gold)' : 'var(--stoa-ink-3)', flexShrink: 0 }} />
-                <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--stoa-ink-2)', letterSpacing: '0.02em' }}>
-                  {isConfigured ? orgName : 'Configurar org'}
-                </span>
-              </div>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--stoa-ink-3)', paddingLeft: 10, letterSpacing: '0.04em' }}>
-                {decisions.length} decisión{decisions.length !== 1 ? 'es' : ''}
-              </span>
-            </button>
-            {SUPABASE_ENABLED && user && (
-              <>
-                <div style={{ width: 1, height: 12, backgroundColor: 'var(--stoa-rule-strong)' }} />
-                <button
-                  onClick={() => signOut()}
-                  title={user.email}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                >
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--stoa-ink-3)', letterSpacing: '0.06em' }}>
-                    Salir
-                  </span>
-                </button>
-              </>
-            )}
-          </>
-        )}
-      </div>
+          <span style={{ fontSize: 13 }}>🔥</span>
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 12,
+              color: streak > 0 ? 'var(--fos-warm)' : 'var(--fos-ink-3)',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {streak} day{streak === 1 ? '' : 's'}
+          </span>
+        </div>
+      )}
     </nav>
   )
 }

@@ -1,0 +1,126 @@
+import type { Scenario, ScenarioCategory } from '../types'
+
+export const CATEGORY_LABEL: Record<ScenarioCategory, string> = {
+  introduction: 'Introduction',
+  company: 'Company',
+  networking: 'Networking',
+  meetings: 'Meetings',
+  pitch: 'Pitch',
+  ai: 'AI & business',
+  speaking: 'Public speaking',
+  pressure: 'Under pressure',
+  casual: 'Casual',
+}
+
+export const SCENARIOS: Scenario[] = [
+  {
+    id: 'introduce-self',
+    title: 'Introduce myself at an international event',
+    brief: 'You just met someone at a global startup event. Introduce yourself.',
+    briefEs: 'Acabas de conocer a alguien en un evento internacional de startups. Preséntate.',
+    category: 'introduction',
+    intensity: 1,
+    goal: 'Sound warm and clear in 20 seconds',
+    opener: "Hi, nice to meet you. I don't think we've met — I'm Alex. So, what brings you here today?",
+  },
+  {
+    id: 'explain-what-i-do',
+    title: 'Explain what I do',
+    brief: 'Someone asks what you do. Explain it simply, without jargon.',
+    briefEs: 'Alguien te pregunta a qué te dedicas. Explícalo de forma simple, sin tecnicismos.',
+    category: 'introduction',
+    intensity: 1,
+    goal: 'One clear sentence anyone understands',
+    opener: "So tell me — what do you actually do? Keep it simple, I'm not technical.",
+  },
+  {
+    id: 'talk-about-company',
+    title: 'Talk about my company',
+    brief: 'Describe your company: what it does, who it helps, why it matters.',
+    briefEs: 'Describe tu empresa: qué hace, a quién ayuda y por qué importa.',
+    category: 'company',
+    intensity: 2,
+    goal: 'Explain the company with confidence',
+    opener: "I'd love to hear more about your company. What are you building, and who is it for?",
+  },
+  {
+    id: 'networking',
+    title: 'Business networking',
+    brief: 'Keep a relaxed but useful conversation going with a potential contact.',
+    briefEs: 'Mantén una conversación relajada pero útil con un contacto potencial.',
+    category: 'networking',
+    intensity: 2,
+    goal: 'Build rapport and open a door',
+    opener: "This event is pretty big this year. Have you found anyone interesting to talk to so far?",
+  },
+  {
+    id: 'client-meeting',
+    title: 'Client meeting',
+    brief: 'A first call with a potential client. Understand their needs and present value.',
+    briefEs: 'Primera llamada con un cliente potencial. Entiende sus necesidades y presenta valor.',
+    category: 'meetings',
+    intensity: 2,
+    goal: 'Lead the conversation, listen well',
+    opener: "Thanks for taking the time. Before we start — what made you want to talk to us now?",
+  },
+  {
+    id: 'founder-pitch',
+    title: 'Founder pitch',
+    brief: 'Pitch your startup to an investor. Problem, solution, traction, ask.',
+    briefEs: 'Presenta tu startup a un inversor. Problema, solución, tracción y petición.',
+    category: 'pitch',
+    intensity: 3,
+    goal: 'Pitch clearly and confidently',
+    opener: "You've got two minutes. Tell me what you're building and why I should care.",
+  },
+  {
+    id: 'ai-business',
+    title: 'AI and business conversation',
+    brief: 'Discuss how AI and automation fit into your business and strategy.',
+    briefEs: 'Habla sobre cómo la IA y la automatización encajan en tu negocio y estrategia.',
+    category: 'ai',
+    intensity: 3,
+    goal: 'Talk about AI without hype',
+    opener: "Everyone's talking about AI right now. How are you actually using it in your business?",
+  },
+  {
+    id: 'public-speaking',
+    title: 'Public speaking practice',
+    brief: 'Deliver a short talk to an audience. Warm, structured, confident.',
+    briefEs: 'Da una charla breve ante público. Cercana, estructurada y con confianza.',
+    category: 'speaking',
+    intensity: 3,
+    goal: 'Speak to a room with presence',
+    opener: "The stage is yours. Take a breath, and open your talk however you'd like. I'm your audience.",
+  },
+  {
+    id: 'difficult-questions',
+    title: 'Difficult questions',
+    brief: 'Handle tough, unexpected questions calmly and honestly.',
+    briefEs: 'Responde preguntas difíciles e inesperadas con calma y honestidad.',
+    category: 'pressure',
+    intensity: 3,
+    goal: 'Stay calm under pressure',
+    opener: "Honestly? I'm not sure your numbers add up. How do you know people will actually pay for this?",
+  },
+  {
+    id: 'casual-conversation',
+    title: 'Casual conversation',
+    brief: 'Relaxed small talk — weekend, travel, food, life. Just flow.',
+    briefEs: 'Conversación relajada — el fin de semana, viajes, comida, la vida. Solo fluir.',
+    category: 'casual',
+    intensity: 1,
+    goal: 'Relax and let the words flow',
+    opener: "We've got a few minutes before things start. So — how's your week been?",
+  },
+]
+
+export function getScenario(id: string): Scenario | undefined {
+  return SCENARIOS.find((s) => s.id === id)
+}
+
+export const INTENSITY_LABEL: Record<1 | 2 | 3, string> = {
+  1: 'Warm-up',
+  2: 'Focused',
+  3: 'Challenge',
+}

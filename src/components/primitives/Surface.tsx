@@ -9,9 +9,9 @@ interface SurfaceProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 const bg: Record<Level, string> = {
-  1: 'var(--stoa-surface-1)',
-  2: 'var(--stoa-surface-2)',
-  3: 'var(--stoa-surface-3)',
+  1: 'var(--fos-surface-1)',
+  2: 'var(--fos-surface-2)',
+  3: 'var(--fos-surface-3)',
 }
 
 const shadow: Record<Level, string | undefined> = {
@@ -26,7 +26,7 @@ const Surface = forwardRef<HTMLDivElement, SurfaceProps>(
       ref={ref}
       style={{
         backgroundColor: bg[level],
-        border: bordered ? '1px solid var(--stoa-border)' : undefined,
+        border: bordered ? '1px solid var(--fos-border)' : undefined,
         boxShadow: shadow[level],
         ...style,
       }}

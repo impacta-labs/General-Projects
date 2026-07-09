@@ -7,35 +7,41 @@
 }
 
 :root {
-  /* Surface stack — perceptible but not theatrical */
-  --stoa-bg:        #080809;
-  --stoa-surface-1: #0D0D10;
-  --stoa-surface-2: #131318;
-  --stoa-surface-3: #19191F;
-  --stoa-surface-4: #1F1F27;
+  /* Surface stack — a quiet, warm-dark training room */
+  --fos-bg:        #0A0B0D;
+  --fos-surface-1: #0E1013;
+  --fos-surface-2: #14171B;
+  --fos-surface-3: #1B1F24;
+  --fos-surface-4: #232830;
 
   /* Rules — structural weight */
-  --stoa-rule:        #222228;
-  --stoa-rule-strong: #2E2E36;
+  --fos-rule:        #232830;
+  --fos-rule-strong: #2E343D;
 
-  /* Ink — aged paper hierarchy */
-  --stoa-ink:   #EAE5DC;
-  --stoa-ink-2: #857F78;
-  --stoa-ink-3: #474440;
+  /* Ink — warm, legible hierarchy */
+  --fos-ink:   #ECE9E3;
+  --fos-ink-2: #98A0A0;
+  --fos-ink-3: #565E60;
 
-  /* Accent — archival gold */
-  --stoa-gold:        #C4952A;
-  --stoa-gold-muted:  #7A5E18;
-  --stoa-gold-subtle: rgba(196, 149, 42, 0.07);
+  /* Accent — calm sage/teal: breath, focus, water */
+  --fos-accent:        #82B3A4;
+  --fos-accent-strong: #9BCBBB;
+  --fos-accent-muted:  #3E574F;
+  --fos-accent-subtle: rgba(130, 179, 164, 0.09);
+  --fos-accent-glow:   rgba(130, 179, 164, 0.28);
 
-  /* Semantic */
-  --stoa-amber:    #B5621A;
-  --stoa-resolve:  #4A7A5A;
-  --stoa-critical: #8A2A2A;
+  /* Warm secondary — phrases, saved language */
+  --fos-warm:        #C7A468;
+  --fos-warm-subtle: rgba(199, 164, 104, 0.10);
+
+  /* Semantic — corrections stay calm, never alarming */
+  --fos-mistake:  #C98763;
+  --fos-improve:  #82B3A4;
+  --fos-confident:#7FA9C4;
 
   /* Borders */
-  --stoa-border:        rgba(255, 255, 255, 0.07);
-  --stoa-border-strong: rgba(255, 255, 255, 0.13);
+  --fos-border:        rgba(255, 255, 255, 0.06);
+  --fos-border-strong: rgba(255, 255, 255, 0.12);
 }
 
 *, *::before, *::after {
@@ -49,8 +55,8 @@ html, body {
 }
 
 body {
-  background-color: var(--stoa-bg);
-  color: var(--stoa-ink);
+  background-color: var(--fos-bg);
+  color: var(--fos-ink);
   font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.6;
@@ -79,55 +85,71 @@ body {
 }
 
 ::selection {
-  background: rgba(196, 149, 42, 0.22);
-  color: var(--stoa-ink);
+  background: rgba(130, 179, 164, 0.24);
+  color: var(--fos-ink);
 }
 
+input, textarea, button {
+  font-family: inherit;
+}
+
+textarea { resize: none; }
+
 /* Responsive grid utilities */
-.stoa-col-2 {
+.fos-col-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
 }
-.stoa-col-left-280 {
+.fos-col-3 {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: repeat(3, 1fr);
 }
-.stoa-col-left-180 {
+.fos-col-4 {
   display: grid;
-  grid-template-columns: 180px 1fr;
+  grid-template-columns: repeat(4, 1fr);
 }
-.stoa-col-right-240 {
+.fos-col-left-260 {
   display: grid;
-  grid-template-columns: 1fr 240px;
+  grid-template-columns: 260px 1fr;
 }
-.stoa-col-right-340 {
+.fos-col-right-360 {
   display: grid;
-  grid-template-columns: 1fr 340px;
+  grid-template-columns: 1fr 360px;
 }
-.stoa-col-3-chamber {
-  display: grid;
-  grid-template-columns: 1fr 1fr 280px;
+
+@media (max-width: 900px) {
+  .fos-col-4 { grid-template-columns: 1fr 1fr; }
+  .fos-col-3 { grid-template-columns: 1fr; }
+  .fos-col-right-360 { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {
-  .stoa-col-2,
-  .stoa-col-left-280,
-  .stoa-col-left-180,
-  .stoa-col-right-240,
-  .stoa-col-right-340,
-  .stoa-col-3-chamber {
+  .fos-col-2,
+  .fos-col-left-260 {
     grid-template-columns: 1fr;
   }
-
   body {
     font-size: 13px;
-    line-height: 1.5;
+    line-height: 1.55;
   }
 }
 
-/* Narrow mobile — further density compression */
-@media (max-width: 390px) {
-  body {
-    font-size: 12px;
-  }
+@media (max-width: 480px) {
+  .fos-col-4 { grid-template-columns: 1fr; }
+}
+
+/* Breathing animation for the voice orb */
+@keyframes fos-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.55; }
+  50%      { transform: scale(1.08); opacity: 0.9; }
+}
+
+@keyframes fos-pulse-ring {
+  0%   { transform: scale(0.9); opacity: 0.7; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+@keyframes fos-fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }

@@ -10,8 +10,8 @@ export default function Rule({ weight = 'light', className, style }: RuleProps) 
       style={{
         border: 'none',
         borderTop: weight === 'strong'
-          ? '1px solid var(--stoa-border-strong)'
-          : '1px solid var(--stoa-rule)',
+          ? '1px solid var(--fos-border-strong)'
+          : '1px solid var(--fos-rule)',
         margin: 0,
         ...style,
       }}
