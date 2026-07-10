@@ -99,6 +99,45 @@ export interface UserProfile {
   longestStreak: number
 }
 
+// ── Lessons (Learn / training) ───────────────────────────────────────────────
+
+export interface LessonPhrase {
+  en: string
+  es: string
+  example: string
+}
+
+export interface LessonDrill {
+  /** What the founder should try to say, prompted in Spanish */
+  promptEs: string
+  /** A model correct English answer */
+  targetEn: string
+  /** A short tip in Spanish */
+  tipEs: string
+}
+
+export interface Lesson {
+  id: string
+  title: string // English topic name
+  titleEs: string // Spanish topic name
+  goalEs: string // one-line goal, Spanish
+  category: string
+  intensity: 1 | 2 | 3
+  conceptEs: string // the teaching, in Spanish
+  whyEs: string // why it matters for a founder, Spanish
+  phrases: LessonPhrase[]
+  examples: string[] // English example sentences
+  drills: LessonDrill[]
+}
+
+/** Feedback for a single drill answer */
+export interface DrillFeedback {
+  ok: boolean
+  correctedEn: string
+  feedbackEs: string
+  tipEs: string
+}
+
 // ── Coach ────────────────────────────────────────────────────────────────────
 
 /** A single turn in the practice conversation */

@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react'
 import { HashRouter, Routes, Route } from 'react-router-dom'
 import Nav from './components/Nav'
 import Dashboard from './screens/Dashboard'
+import Learn from './screens/Learn'
+import Lesson from './screens/Lesson'
 import PracticeRoom from './screens/PracticeRoom'
 import ScenarioLibrary from './screens/ScenarioLibrary'
 import ErrorLog from './screens/ErrorLog'
@@ -47,6 +49,8 @@ export default function App() {
     <HashRouter>
       <Routes>
         <Route path="/" element={<Layout><Dashboard /></Layout>} />
+        <Route path="/learn" element={<Layout><Learn /></Layout>} />
+        <Route path="/learn/:id" element={<Layout><Lesson /></Layout>} />
         <Route path="/practice" element={<Layout><PracticeRoom /></Layout>} />
         <Route path="/practice/:scenarioId" element={<Layout><PracticeRoom /></Layout>} />
         <Route path="/scenarios" element={<Layout><ScenarioLibrary /></Layout>} />

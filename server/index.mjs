@@ -113,6 +113,34 @@ Score the founder's spoken English across these dimensions from 1 to 10. Respond
       return res.json({ success: true, data: extractJSON(text) })
     }
 
+    if (action === 'checkDrill') {
+      const { targetEn, userText, promptEs } = params
+      const message = await client.messages.create({
+        model: MODEL,
+        max_tokens: 400,
+        system:
+          'You are a warm English speaking coach for a Spanish founder doing a speaking drill. You judge whether their spoken attempt means the same as the target sentence and is natural English. Be encouraging but honest. Explain in SPANISH.',
+        messages: [
+          {
+            role: 'user',
+            content: `The founder was asked (in Spanish): "${promptEs}"
+Target model answer (English): "${targetEn}"
+What the founder actually said: "${userText}"
+
+Judge it. Respond ONLY with valid JSON:
+{
+  "ok": true or false (true if it means the same and is basically correct English),
+  "correctedEn": "the best natural version of what they should say",
+  "feedbackEs": "warm, specific feedback IN SPANISH (1-2 sentences)",
+  "tipEs": "one short pronunciation or phrasing tip IN SPANISH"
+}`,
+          },
+        ],
+      })
+      const text = message.content[0].type === 'text' ? message.content[0].text : ''
+      return res.json({ success: true, data: extractJSON(text) })
+    }
+
     return res.status(400).json({ error: 'Unknown action' })
   } catch (error) {
     console.error('AI error:', error?.message)

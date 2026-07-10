@@ -5,6 +5,7 @@ import Wordmark from './primitives/Wordmark'
 
 const SCREENS = [
   { path: '/', label: 'Dashboard', short: 'HOME' },
+  { path: '/learn', label: 'Learn', short: 'LEARN' },
   { path: '/practice', label: 'Practice Room', short: 'PRACTICE' },
   { path: '/scenarios', label: 'Scenarios', short: 'SCENES' },
   { path: '/errors', label: 'Error Log', short: 'ERRORS' },

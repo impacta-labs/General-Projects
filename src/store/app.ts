@@ -37,6 +37,7 @@ interface AppState {
   phrases: Phrase[]
   sessions: Session[]
   scores: ScoreRecord[]
+  completedLessons: string[]
 
   // Mistakes
   addMistake: (m: Omit<Mistake, 'id' | 'date'>) => void
@@ -53,6 +54,9 @@ interface AppState {
   // Profile
   updateProfile: (patch: Partial<UserProfile>) => void
 
+  // Lessons
+  markLessonComplete: (id: string) => void
+
   // Housekeeping
   resetAll: () => void
 }
@@ -65,6 +69,7 @@ export const useAppStore = create<AppState>()(
       phrases: SEED_PHRASES,
       sessions: SEED_SESSIONS,
       scores: SEED_SCORES,
+      completedLessons: [],
 
       addMistake: (m) =>
         set((s) => ({
@@ -122,6 +127,9 @@ export const useAppStore = create<AppState>()(
 
       updateProfile: (patch) => set((s) => ({ profile: { ...s.profile, ...patch } })),
 
+      markLessonComplete: (id) =>
+        set((s) => (s.completedLessons.includes(id) ? s : { completedLessons: [...s.completedLessons, id] })),
+
       resetAll: () =>
         set({
           profile: { name: 'Founder', level: 'B2 · Upper-intermediate', lastActiveDay: null, currentStreak: 0, longestStreak: 0 },
@@ -129,6 +137,7 @@ export const useAppStore = create<AppState>()(
           phrases: [],
           sessions: [],
           scores: [],
+          completedLessons: [],
         }),
     }),
     { name: 'founder-english-os' }

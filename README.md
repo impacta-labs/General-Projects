@@ -13,6 +13,7 @@ feels like a private training room, not a school app.
 | Page | What it does |
 | --- | --- |
 | **Dashboard** | Daily streak, sessions completed, current level, top repeated mistakes, phrases learned, next recommended practice. |
+| **Learn** | A founder-focused curriculum of short lessons. Each teaches a skill in Spanish, gives key phrases (EN/ES) with audio, and drills you with guided prompts the coach checks — then tracks which lessons you've completed. |
 | **Practice Room** | The main screen. Pick a scenario, then speak (voice) or type. After every answer the coach returns the main mistake, a natural version, a stronger founder-level version, a pronunciation/rhythm tip, a communication tip, a line to repeat out loud, and a Spanish explanation. Save any mistake or phrase in one tap. |
 | **Scenario Library** | Ten real founder situations, from warm-up to challenge. |
 | **Error Log** | Every saved mistake: what you said, the correction, an explanation in Spanish, an example, the date and the scenario. |
