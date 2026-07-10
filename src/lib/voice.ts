@@ -3,6 +3,76 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+// ── Whisper transcription (accurate, great with accents) ─────────────────────
+// When the server has an OpenAI key, we record audio and transcribe it via
+// /api/transcribe instead of the browser recognizer.
+
+let sttPromise: Promise<boolean> | null = null
+
+/** Cached check: is server-side Whisper transcription available? */
+export function whisperAvailable(): Promise<boolean> {
+  if (!sttPromise) {
+    sttPromise = fetch('/healthz')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => Boolean(j?.stt))
+      .catch(() => false)
+  }
+  return sttPromise
+}
+
+export interface AudioRecorder {
+  /** Stop recording, send the audio for transcription, resolve with the text. */
+  stopAndTranscribe: () => Promise<string>
+  /** Abort without transcribing. */
+  cancel: () => void
+}
+
+function pickRecorderMime(): { mimeType?: string } {
+  const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg']
+  if (typeof MediaRecorder !== 'undefined') {
+    for (const t of candidates) if (MediaRecorder.isTypeSupported(t)) return { mimeType: t }
+  }
+  return {}
+}
+
+/** Start recording from the microphone. Requires user permission. */
+export async function startRecording(): Promise<AudioRecorder> {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+  const mr = new MediaRecorder(stream, pickRecorderMime())
+  const chunks: BlobPart[] = []
+  mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data) }
+  mr.start()
+  const cleanup = () => stream.getTracks().forEach((t) => t.stop())
+
+  return {
+    stopAndTranscribe: () =>
+      new Promise<string>((resolve, reject) => {
+        mr.onstop = async () => {
+          cleanup()
+          try {
+            const blob = new Blob(chunks, { type: mr.mimeType || 'audio/webm' })
+            resolve(await transcribeAudio(blob))
+          } catch (e) {
+            reject(e)
+          }
+        }
+        try { mr.stop() } catch { cleanup(); reject(new Error('stop failed')) }
+      }),
+    cancel: () => { try { mr.stop() } catch { /* noop */ } cleanup() },
+  }
+}
+
+async function transcribeAudio(blob: Blob): Promise<string> {
+  const res = await fetch('/api/transcribe', {
+    method: 'POST',
+    headers: { 'Content-Type': blob.type || 'audio/webm' },
+    body: blob,
+  })
+  if (!res.ok) throw new Error(`transcribe ${res.status}`)
+  const { text } = await res.json()
+  return (text || '').trim()
+}
+
 // ── Speech recognition (voice input) ─────────────────────────────────────────
 
 export function speechRecognitionSupported(): boolean {

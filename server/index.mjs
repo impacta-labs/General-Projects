@@ -19,12 +19,50 @@ const MODEL = process.env.COACH_MODEL || 'claude-haiku-4-5-20251001'
 const hasKey = Boolean(process.env.ANTHROPIC_API_KEY)
 const client = hasKey ? new Anthropic() : null
 
+// Optional: OpenAI Whisper for accurate speech-to-text (great with accents).
+// STT_BASE_URL lets you point at any OpenAI-compatible endpoint (e.g. a local
+// Whisper server) instead of OpenAI.
+const OPENAI_KEY = process.env.OPENAI_API_KEY || ''
+const STT_MODEL = process.env.STT_MODEL || 'whisper-1'
+const STT_BASE_URL = (process.env.STT_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '')
+const hasStt = Boolean(OPENAI_KEY)
+
 const app = express()
 app.use(express.json({ limit: '1mb' }))
 
 // ── Health check ─────────────────────────────────────────────────────────────
 app.get('/healthz', (_req, res) => {
-  res.json({ ok: true, ai: hasKey, model: hasKey ? MODEL : null })
+  res.json({ ok: true, ai: hasKey, model: hasKey ? MODEL : null, stt: hasStt })
+})
+
+// ── Speech-to-text (Whisper) ─────────────────────────────────────────────────
+// Receives raw audio bytes and returns the transcribed English text.
+app.post('/api/transcribe', express.raw({ type: () => true, limit: '25mb' }), async (req, res) => {
+  if (!hasStt) return res.status(503).json({ error: 'STT not configured' })
+  if (!req.body || !req.body.length) return res.status(400).json({ error: 'No audio' })
+  try {
+    const type = req.headers['content-type'] || 'audio/webm'
+    const ext = type.includes('mp4') ? 'mp4' : type.includes('ogg') ? 'ogg' : 'webm'
+    const form = new FormData()
+    form.append('file', new Blob([req.body], { type }), `audio.${ext}`)
+    form.append('model', STT_MODEL)
+    form.append('language', 'en')
+    const r = await fetch(`${STT_BASE_URL}/audio/transcriptions`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${OPENAI_KEY}` },
+      body: form,
+    })
+    if (!r.ok) {
+      const detail = await r.text()
+      console.error('STT upstream error:', r.status, detail.slice(0, 300))
+      return res.status(502).json({ error: 'transcription failed' })
+    }
+    const j = await r.json()
+    return res.json({ text: (j.text || '').trim() })
+  } catch (error) {
+    console.error('transcribe error:', error?.message)
+    return res.status(500).json({ error: 'transcription failed' })
+  }
 })
 
 // ── AI coach API ─────────────────────────────────────────────────────────────
@@ -161,6 +199,7 @@ if (fs.existsSync(DIST)) {
 app.listen(PORT, () => {
   console.log(`Founder English OS running on http://localhost:${PORT}`)
   console.log(`  AI coach: ${hasKey ? `on (${MODEL})` : 'off — using local fallback in the browser'}`)
+  console.log(`  Voice (Whisper): ${hasStt ? `on (${STT_MODEL})` : 'off — using the browser recognizer'}`)
 })
 
 function extractJSON(text) {

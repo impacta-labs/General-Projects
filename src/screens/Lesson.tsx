@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useIsMobile } from '../hooks/useViewport'
 import { Page, Button, Tag } from '../components'
@@ -6,7 +6,8 @@ import MicButton from '../components/primitives/MicButton'
 import { getLessonById, CURRICULUM } from '../data/curriculum'
 import { useAppStore } from '../store/app'
 import { checkDrill } from '../lib/lessons'
-import { speak, stopSpeaking, speechSynthesisSupported, createRecognizer, speechRecognitionSupported, type Recognizer } from '../lib/voice'
+import { speak, stopSpeaking, speechSynthesisSupported } from '../lib/voice'
+import { useDictation } from '../hooks/useDictation'
 import type { DrillFeedback, LessonPhrase } from '../types'
 
 export default function Lesson() {
@@ -127,41 +128,14 @@ export default function Lesson() {
 function DrillCard({ index, promptEs, targetEn, tipEs }: { index: number; promptEs: string; targetEn: string; tipEs: string }) {
   const isMobile = useIsMobile()
   const [input, setInput] = useState('')
-  const [interim, setInterim] = useState('')
-  const [listening, setListening] = useState(false)
   const [checking, setChecking] = useState(false)
   const [feedback, setFeedback] = useState<DrillFeedback | null>(null)
-  const recRef = useRef<Recognizer | null>(null)
-  const wantRef = useRef(false)
-  const voiceSupported = speechRecognitionSupported()
   const tts = speechSynthesisSupported()
-
-  function stopListening() {
-    wantRef.current = false
-    recRef.current?.stop()
-    setListening(false)
-    setInterim('')
-  }
-
-  function toggleListening() {
-    if (listening) { stopListening(); return }
-    stopSpeaking()
-    wantRef.current = true
-    const rec = createRecognizer({
-      onPartial: (t) => setInterim(t),
-      onFinal: (chunk) => { setInterim(''); setInput((prev) => (prev.trim() ? prev.trim() + ' ' : '') + chunk) },
-      onError: (err) => { if (err === 'not-allowed' || err === 'service-not-allowed') { wantRef.current = false; setListening(false); setInterim('') } },
-      onEnd: () => { if (wantRef.current) { try { recRef.current?.start() } catch { /* noop */ } } else setListening(false) },
-    })
-    if (!rec) return
-    recRef.current = rec
-    setListening(true)
-    rec.start()
-  }
+  const dictation = useDictation((chunk) => setInput((prev) => (prev.trim() ? prev.trim() + ' ' : '') + chunk))
 
   async function check() {
     if (!input.trim() || checking) return
-    stopListening()
+    dictation.stop()
     setChecking(true)
     const fb = await checkDrill(targetEn, input, promptEs)
     setFeedback(fb)
@@ -176,11 +150,11 @@ function DrillCard({ index, promptEs, targetEn, tipEs }: { index: number; prompt
       </div>
 
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10 }}>
-        {voiceSupported && <MicButton listening={listening} onClick={toggleListening} disabled={checking} size={isMobile ? 44 : 48} />}
+        {dictation.supported && <MicButton listening={dictation.listening} onClick={dictation.toggle} disabled={checking || dictation.busy} size={isMobile ? 44 : 48} />}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {listening && (
+          {(dictation.listening || dictation.busy) && (
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, letterSpacing: '0.06em', color: 'var(--fos-accent)', textTransform: 'uppercase' }}>
-              {interim ? `“${interim}”` : '● Grabando — pulsa el micro al terminar'}
+              {dictation.busy ? '⋯ Transcribiendo…' : dictation.interim ? `“${dictation.interim}”` : '● Grabando — pulsa el micro al terminar'}
             </span>
           )}
           <input

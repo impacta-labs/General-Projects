@@ -13,5 +13,8 @@ services:
       # Server-side only — enables the Claude-powered coach
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       COACH_MODEL: ${COACH_MODEL:-claude-haiku-4-5-20251001}
+      # Server-side only — enables accurate Whisper voice transcription
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      STT_MODEL: ${STT_MODEL:-whisper-1}
       PORT: 8787
     restart: unless-stopped

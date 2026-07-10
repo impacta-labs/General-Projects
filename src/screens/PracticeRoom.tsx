@@ -7,14 +7,8 @@ import { SCENARIOS, getScenario, INTENSITY_LABEL, CATEGORY_LABEL } from '../data
 import { SCORE_DIMENSIONS } from '../tokens'
 import type { ChatTurn, CoachFeedback, ScoreSet, Scenario } from '../types'
 import { coach, scoreSession } from '../lib/coach'
-import {
-  createRecognizer,
-  speechRecognitionSupported,
-  speak,
-  stopSpeaking,
-  speechSynthesisSupported,
-  type Recognizer,
-} from '../lib/voice'
+import { speak, stopSpeaking, speechSynthesisSupported } from '../lib/voice'
+import { useDictation } from '../hooks/useDictation'
 import { useAppStore } from '../store/app'
 
 function uid() {
@@ -93,8 +87,6 @@ function Conversation({ scenario }: { scenario: Scenario }) {
     { id: uid(), role: 'coach', text: scenario.opener },
   ])
   const [input, setInput] = useState('')
-  const [interim, setInterim] = useState('')
-  const [listening, setListening] = useState(false)
   const [thinking, setThinking] = useState(false)
   const [voiceOn, setVoiceOn] = useState(true)
   const [savedMistakes, setSavedMistakes] = useState<Set<string>>(new Set())
@@ -102,10 +94,11 @@ function Conversation({ scenario }: { scenario: Scenario }) {
   const [summary, setSummary] = useState<ScoreSet | null>(null)
   const [scoring, setScoring] = useState(false)
 
-  const recognizerRef = useRef<Recognizer | null>(null)
-  const wantListeningRef = useRef(false)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const voiceSupported = speechRecognitionSupported()
+  const dictation = useDictation((chunk) =>
+    setInput((prev) => (prev.trim() ? prev.trim() + ' ' : '') + chunk)
+  )
+  const voiceSupported = dictation.supported
   const ttsSupported = speechSynthesisSupported()
 
   // Speak the coach's opening line once
@@ -125,24 +118,11 @@ function Conversation({ scenario }: { scenario: Scenario }) {
     return { userTurns, mistakes: savedMistakes.size, phrases: savedPhrases.size }
   }, [turns, savedMistakes, savedPhrases])
 
-  function stopListening() {
-    wantListeningRef.current = false
-    recognizerRef.current?.stop()
-    setListening(false)
-    setInterim('')
-  }
-
-  // Stop the mic if the user leaves this scenario / unmounts
-  useEffect(() => {
-    return () => { wantListeningRef.current = false; recognizerRef.current?.stop() }
-  }, [])
-
   async function submit(text: string) {
     const clean = text.trim()
     if (!clean || thinking) return
-    stopListening()
+    dictation.stop()
     setInput('')
-    setInterim('')
 
     const userTurn: ChatTurn = { id: uid(), role: 'user', text: clean }
     const history = [...turns]
@@ -156,44 +136,9 @@ function Conversation({ scenario }: { scenario: Scenario }) {
     if (voiceOn && ttsSupported) speak(feedback.reply)
   }
 
-  function toggleListening() {
-    if (listening) { stopListening(); return }
-    stopSpeaking()
-    wantListeningRef.current = true
-    const rec = createRecognizer({
-      onPartial: (t) => setInterim(t),
-      // Accumulate spoken words into the input box — don't auto-send.
-      // The founder taps the mic again (or Send) when they've finished.
-      onFinal: (chunk) => {
-        setInterim('')
-        setInput((prev) => (prev.trim() ? prev.trim() + ' ' : '') + chunk)
-      },
-      onError: (err) => {
-        if (err === 'not-allowed' || err === 'service-not-allowed') {
-          wantListeningRef.current = false
-          setListening(false)
-          setInterim('')
-        }
-      },
-      // Chrome stops the session after long silence — restart while still wanted.
-      onEnd: () => {
-        if (wantListeningRef.current) {
-          try { recognizerRef.current?.start() } catch { /* noop */ }
-        } else {
-          setListening(false)
-        }
-      },
-    })
-    if (!rec) return
-    recognizerRef.current = rec
-    setInterim('')
-    setListening(true)
-    rec.start()
-  }
-
   async function endSession() {
     stopSpeaking()
-    stopListening()
+    dictation.stop()
     setScoring(true)
     const score = await scoreSession(scenario, turns)
     setScoring(false)
@@ -289,12 +234,18 @@ function Conversation({ scenario }: { scenario: Scenario }) {
       >
         <div style={{ maxWidth: 760, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 14 }}>
           {voiceSupported && (
-            <MicButton listening={listening} onClick={toggleListening} disabled={thinking} size={isMobile ? 56 : 64} />
+            <MicButton listening={dictation.listening} onClick={dictation.toggle} disabled={thinking || dictation.busy} size={isMobile ? 56 : 64} />
           )}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {listening && (
+            {(dictation.listening || dictation.busy) && (
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.08em', color: 'var(--fos-accent)', textTransform: 'uppercase' }}>
-                {interim ? `“${interim}”` : '● Recording — take your time. Tap the mic (or Send) when you\'re done.'}
+                {dictation.busy
+                  ? '⋯ Transcribing…'
+                  : dictation.interim
+                    ? `“${dictation.interim}”`
+                    : dictation.mode === 'whisper'
+                      ? '● Recording — speak your answer, then tap the mic to transcribe.'
+                      : '● Recording — take your time. Tap the mic (or Send) when you\'re done.'}
               </span>
             )}
             <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
@@ -327,7 +278,7 @@ function Conversation({ scenario }: { scenario: Scenario }) {
             </div>
           </div>
         </div>
-        {!voiceSupported && (
+        {dictation.mode === 'none' && (
           <p style={{ maxWidth: 760, margin: '10px auto 0', fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--fos-ink-3)' }}>
             Voice input isn't available in this browser — Chrome or Edge work best. You can still type every answer.
           </p>

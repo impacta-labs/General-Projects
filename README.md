@@ -35,7 +35,14 @@ mistake per answer, stays calm and encouraging, and keeps the roleplay going.
 
 Voice-first, with a text fallback everywhere:
 
-- **Speak** — browser Speech Recognition (`en-US`). Works best in Chrome / Edge.
+- **Speak** — two engines, chosen automatically:
+  - **Whisper (recommended)** — when an `OPENAI_API_KEY` is set, audio is
+    recorded and transcribed by OpenAI Whisper on the server. Far more accurate
+    for English spoken with a Spanish accent.
+  - **Browser** — if Whisper isn't configured, it falls back to the browser's
+    Speech Recognition (`en-US`, best in Chrome / Edge).
+  Either way the words land in the input box so you can fix any word before
+  sending.
 - **Listen** — the coach reads its replies and corrections aloud via Speech
   Synthesis, at a calm pace. Toggle it off any time.
 - **Type** — every answer can be typed instead. No microphone required.
@@ -59,6 +66,8 @@ Copy `.env.example` to `.env` and fill in what you need (all optional):
 ```
 ANTHROPIC_API_KEY=...          # server /api/ai — enables the Claude coach
 COACH_MODEL=claude-haiku-4-5-20251001
+OPENAI_API_KEY=...             # server /api/transcribe — enables Whisper voice
+STT_MODEL=whisper-1            # or STT_BASE_URL for an OpenAI-compatible endpoint
 PORT=8787                      # server port
 VITE_SUPABASE_URL=...          # frontend — Supabase project URL
 VITE_SUPABASE_ANON_KEY=...     # frontend — Supabase anon key
