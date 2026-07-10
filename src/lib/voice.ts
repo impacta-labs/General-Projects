@@ -29,7 +29,8 @@ export function createRecognizer(cb: RecognizerCallbacks): Recognizer | null {
   const rec = new Ctor()
   rec.lang = 'en-US'
   rec.interimResults = true
-  rec.continuous = false
+  // Keep listening through natural pauses — the speaker decides when to stop.
+  rec.continuous = true
   rec.maxAlternatives = 1
 
   rec.onresult = (event: any) => {

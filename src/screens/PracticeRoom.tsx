@@ -103,6 +103,7 @@ function Conversation({ scenario }: { scenario: Scenario }) {
   const [scoring, setScoring] = useState(false)
 
   const recognizerRef = useRef<Recognizer | null>(null)
+  const wantListeningRef = useRef(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const voiceSupported = speechRecognitionSupported()
   const ttsSupported = speechSynthesisSupported()
@@ -124,9 +125,22 @@ function Conversation({ scenario }: { scenario: Scenario }) {
     return { userTurns, mistakes: savedMistakes.size, phrases: savedPhrases.size }
   }, [turns, savedMistakes, savedPhrases])
 
+  function stopListening() {
+    wantListeningRef.current = false
+    recognizerRef.current?.stop()
+    setListening(false)
+    setInterim('')
+  }
+
+  // Stop the mic if the user leaves this scenario / unmounts
+  useEffect(() => {
+    return () => { wantListeningRef.current = false; recognizerRef.current?.stop() }
+  }, [])
+
   async function submit(text: string) {
     const clean = text.trim()
     if (!clean || thinking) return
+    stopListening()
     setInput('')
     setInterim('')
 
@@ -143,21 +157,32 @@ function Conversation({ scenario }: { scenario: Scenario }) {
   }
 
   function toggleListening() {
-    if (listening) {
-      recognizerRef.current?.stop()
-      setListening(false)
-      return
-    }
+    if (listening) { stopListening(); return }
     stopSpeaking()
+    wantListeningRef.current = true
     const rec = createRecognizer({
       onPartial: (t) => setInterim(t),
-      onFinal: (t) => {
-        setListening(false)
+      // Accumulate spoken words into the input box — don't auto-send.
+      // The founder taps the mic again (or Send) when they've finished.
+      onFinal: (chunk) => {
         setInterim('')
-        submit(t)
+        setInput((prev) => (prev.trim() ? prev.trim() + ' ' : '') + chunk)
       },
-      onError: () => { setListening(false); setInterim('') },
-      onEnd: () => setListening(false),
+      onError: (err) => {
+        if (err === 'not-allowed' || err === 'service-not-allowed') {
+          wantListeningRef.current = false
+          setListening(false)
+          setInterim('')
+        }
+      },
+      // Chrome stops the session after long silence — restart while still wanted.
+      onEnd: () => {
+        if (wantListeningRef.current) {
+          try { recognizerRef.current?.start() } catch { /* noop */ }
+        } else {
+          setListening(false)
+        }
+      },
     })
     if (!rec) return
     recognizerRef.current = rec
@@ -168,7 +193,7 @@ function Conversation({ scenario }: { scenario: Scenario }) {
 
   async function endSession() {
     stopSpeaking()
-    if (listening) recognizerRef.current?.stop()
+    stopListening()
     setScoring(true)
     const score = await scoreSession(scenario, turns)
     setScoring(false)
@@ -267,9 +292,9 @@ function Conversation({ scenario }: { scenario: Scenario }) {
             <MicButton listening={listening} onClick={toggleListening} disabled={thinking} size={isMobile ? 56 : 64} />
           )}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {(listening || interim) && (
+            {listening && (
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.08em', color: 'var(--fos-accent)', textTransform: 'uppercase' }}>
-                {interim ? interim : 'Listening…'}
+                {interim ? `“${interim}”` : '● Recording — take your time. Tap the mic (or Send) when you\'re done.'}
               </span>
             )}
             <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>

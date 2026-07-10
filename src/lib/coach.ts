@@ -101,6 +101,12 @@ interface Rule {
   pron: string
 }
 
+// Common verbs founders use — lets us spot a missing "to" (e.g. "want speak").
+const VERBS =
+  'speak|talk|learn|do|make|get|go|say|tell|explain|understand|improve|practice|practise|' +
+  'communicate|work|build|create|start|grow|sell|meet|help|show|share|present|pitch|' +
+  'know|think|see|find|use|manage|lead|hire|scale|launch|write|read|listen|travel|study'
+
 const RULES: Rule[] = [
   {
     test: /\bi have (\d{1,2}) years?\b/i,
@@ -165,6 +171,32 @@ const RULES: Rule[] = [
     founder: () => 'ask you something',
     es: 'Las preguntas se “ask”, no se “make”: “ask a question”.',
     pron: 'Di “ask” con la “a” abierta y clara.',
+  },
+  {
+    // "it's important speak" → "important to speak"; also difficult/easy/hard…
+    test: new RegExp(`\\b(important|difficult|easy|hard|necessary|possible|impossible|nice|good)\\s+(?!to\\b)(${VERBS})\\b`, 'i'),
+    mistake: (m) => `${m[1]} ${m[2]}`,
+    natural: (m) => `${m[1]} to ${m[2]}`,
+    founder: (m) => `${m[1]} to ${m[2]}`,
+    es: 'Tras adjetivos como “important/difficult/easy” el verbo lleva “to”: “important to speak”, no “important speak”.',
+    pron: 'Di “to” muy corto y débil, casi “ta”: “important-ta-speak”.',
+  },
+  {
+    // "I want speak" → "I want to speak"; want/need/like/try/hope/plan + verb
+    test: new RegExp(`\\b(want|need|like|love|hope|try|plan|decide|would like|going)\\s+(?!to\\b)(${VERBS})\\b`, 'i'),
+    mistake: (m) => `${m[1]} ${m[2]}`,
+    natural: (m) => `${m[1]} to ${m[2]}`,
+    founder: (m) => `${m[1]} to ${m[2]}`,
+    es: 'Verbos como “want/need/like/try” piden “to” + verbo: “I want to speak”, no “I want speak”.',
+    pron: 'Une “want to” en “wanna” al hablar rápido: “I wanna speak”.',
+  },
+  {
+    test: /\bhow to say\b.*\?|\bhow is said\b|\bhow do you say\b/i,
+    mistake: (m) => m[0],
+    natural: () => 'how do you say…?',
+    founder: () => 'what’s the word for…?',
+    es: 'Para preguntar por una palabra: “How do you say… in English?” o “What’s the word for…?”.',
+    pron: 'Liga “how-do-you” rápido: “howdya say”.',
   },
 ]
 
