@@ -25,8 +25,8 @@ During practice the coach speaks in **simple, natural English** and explains the
 important corrections in **Spanish**. It corrects only the single most important
 mistake per answer, stays calm and encouraging, and keeps the roleplay going.
 
-- **With an Anthropic API key** (deployed on Vercel), the coach is powered by
-  Claude via the `/api/ai` serverless function.
+- **With an Anthropic API key**, the coach is powered by Claude via the
+  `/api/ai` endpoint on the app's own Node server.
 - **Without one**, a built-in local coach catches the most common
   Spanish→English speaking mistakes so the app is fully usable offline.
 
@@ -53,12 +53,14 @@ Tables (see [`supabase/schema.sql`](supabase/schema.sql)):
 
 ### Environment variables
 
-Set these to enable cloud backup (and the Claude-powered coach on Vercel):
+Copy `.env.example` to `.env` and fill in what you need (all optional):
 
 ```
+ANTHROPIC_API_KEY=...          # server /api/ai — enables the Claude coach
+COACH_MODEL=claude-haiku-4-5-20251001
+PORT=8787                      # server port
 VITE_SUPABASE_URL=...          # frontend — Supabase project URL
 VITE_SUPABASE_ANON_KEY=...     # frontend — Supabase anon key
-ANTHROPIC_API_KEY=...          # serverless /api/ai — Claude coach
 ```
 
 To enable cloud backup: run `supabase/schema.sql` in the Supabase SQL editor,
@@ -68,14 +70,45 @@ then turn on **Anonymous sign-ins** in Authentication → Providers.
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173
-npm run build      # type-check + production build
-npm run preview    # serve the production build
+npm run dev        # frontend only, http://localhost:5173 (local coach)
+npm start          # run the Node server on :8787 (enables the Claude coach)
 ```
+
+In dev, Vite proxies `/api` to the Node server on `:8787`, so run `npm start`
+in a second terminal if you want the real Claude coach while developing.
+
+## Deploy — self-hosted
+
+One Node process serves the built frontend **and** the AI coach API. No Vercel,
+no serverless — runs on your own platform (VPS, Render, Railway, Fly.io, …).
+
+**Plain Node**
+
+```bash
+npm ci
+npm run build      # → dist/
+npm start          # serves dist/ + /api/ai on $PORT (default 8787)
+```
+
+**Docker**
+
+```bash
+docker compose up --build     # reads ANTHROPIC_API_KEY / VITE_* from your env or .env
+# or
+docker build -t founder-english-os \
+  --build-arg VITE_SUPABASE_URL=... --build-arg VITE_SUPABASE_ANON_KEY=... .
+docker run -p 8787:8787 -e ANTHROPIC_API_KEY=... founder-english-os
+```
+
+Put it behind your own Nginx/Caddy/Cloudflare for TLS. Health check: `GET /healthz`.
+
+> Note: `VITE_*` values are baked in at **build** time (they ship to the
+> browser — the Supabase anon key is meant to be public). `ANTHROPIC_API_KEY`
+> is read at **runtime** by the server and never reaches the browser.
 
 ## Tech
 
 React 19 · TypeScript · Vite · React Router · Zustand · Recharts ·
-Web Speech API · Supabase · Anthropic (Claude) · deployed on Vercel.
+Web Speech API · Supabase · Anthropic (Claude) · self-hosted Node + Express · Docker.
 
 _Private personal training app. No payments, no multi-user SaaS — by design._

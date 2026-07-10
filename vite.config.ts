@@ -8,4 +8,11 @@ export default defineConfig({
     react(),
   ],
   base: '/',
+  // In dev, proxy the coach API to the local Node server (npm start) if it's
+  // running. Without it, the app falls back to the in-browser local coach.
+  server: {
+    proxy: {
+      '/api': 'http://localhost:8787',
+    },
+  },
 })

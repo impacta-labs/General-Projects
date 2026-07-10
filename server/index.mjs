@@ -1,29 +1,44 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Vercel serverless function — req/res and model JSON are dynamic boundaries.
+// Founder English OS — self-hosted server.
+// One Node process serves the built frontend (dist/) AND the AI coach API.
+// Runs anywhere: a VPS, Docker, Render, Railway, Fly.io — no Vercel required.
+//
+//   npm run build      # build the frontend into dist/
+//   npm start          # serve dist/ + /api/ai on $PORT (default 8787)
+
+import express from 'express'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import fs from 'node:fs'
 import Anthropic from '@anthropic-ai/sdk'
 
-const client = new Anthropic()
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const DIST = path.resolve(__dirname, '..', 'dist')
+const PORT = process.env.PORT || 8787
+const MODEL = process.env.COACH_MODEL || 'claude-haiku-4-5-20251001'
 
-const MODEL = 'claude-haiku-4-5-20251001'
+const hasKey = Boolean(process.env.ANTHROPIC_API_KEY)
+const client = hasKey ? new Anthropic() : null
 
-export default async function handler(req: any, res: any) {
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' })
-    return
-  }
+const app = express()
+app.use(express.json({ limit: '1mb' }))
 
+// ── Health check ─────────────────────────────────────────────────────────────
+app.get('/healthz', (_req, res) => {
+  res.json({ ok: true, ai: hasKey, model: hasKey ? MODEL : null })
+})
+
+// ── AI coach API ─────────────────────────────────────────────────────────────
+app.post('/api/ai', async (req, res) => {
   const { action, params } = req.body || {}
+  if (!action || !params) return res.status(400).json({ error: 'Missing action or params' })
 
-  if (!action || !params) {
-    res.status(400).json({ error: 'Missing action or params' })
-    return
-  }
+  // No API key configured → let the frontend fall back to its local coach.
+  if (!client) return res.status(503).json({ error: 'AI not configured' })
 
   try {
     if (action === 'coach') {
       const { scenarioTitle, scenarioBrief, history = [], userText } = params
-
-      const transcript = (history as Array<{ role: string; text: string }>)
+      const transcript = history
         .map((t) => `${t.role === 'coach' ? 'Coach' : 'Founder'}: ${t.text}`)
         .join('\n')
 
@@ -66,16 +81,13 @@ Coach this answer. Respond ONLY with valid JSON, no markdown:
           },
         ],
       })
-
       const text = message.content[0].type === 'text' ? message.content[0].text : ''
-      const data = extractJSON(text)
-      return res.json({ success: true, data })
+      return res.json({ success: true, data: extractJSON(text) })
     }
 
     if (action === 'scoreSession') {
       const { scenarioTitle, history = [] } = params
-
-      const transcript = (history as Array<{ role: string; text: string }>)
+      const transcript = history
         .map((t) => `${t.role === 'coach' ? 'Coach' : 'Founder'}: ${t.text}`)
         .join('\n')
 
@@ -97,20 +109,33 @@ Score the founder's spoken English across these dimensions from 1 to 10. Respond
           },
         ],
       })
-
       const text = message.content[0].type === 'text' ? message.content[0].text : ''
-      const data = extractJSON(text)
-      return res.json({ success: true, data })
+      return res.json({ success: true, data: extractJSON(text) })
     }
 
     return res.status(400).json({ error: 'Unknown action' })
-  } catch (error: any) {
-    console.error('AI proxy error:', error?.message)
+  } catch (error) {
+    console.error('AI error:', error?.message)
     return res.status(500).json({ error: 'AI generation failed', detail: error?.message })
   }
+})
+
+// ── Static frontend + SPA fallback ───────────────────────────────────────────
+if (fs.existsSync(DIST)) {
+  app.use(express.static(DIST))
+  app.get(/^(?!\/api\/).*/, (_req, res) => {
+    res.sendFile(path.join(DIST, 'index.html'))
+  })
+} else {
+  console.warn('⚠  dist/ not found — run `npm run build` first. API is still available.')
 }
 
-function extractJSON(text: string): any {
+app.listen(PORT, () => {
+  console.log(`Founder English OS running on http://localhost:${PORT}`)
+  console.log(`  AI coach: ${hasKey ? `on (${MODEL})` : 'off — using local fallback in the browser'}`)
+})
+
+function extractJSON(text) {
   const trimmed = text.trim()
   try {
     return JSON.parse(trimmed)

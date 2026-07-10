@@ -1,0 +1,17 @@
+# Founder English OS — self-host with: docker compose up --build
+services:
+  app:
+    build:
+      context: .
+      args:
+        # Baked into the frontend build (safe to expose — anon key + URL)
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-}
+    ports:
+      - "8787:8787"
+    environment:
+      # Server-side only — enables the Claude-powered coach
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      COACH_MODEL: ${COACH_MODEL:-claude-haiku-4-5-20251001}
+      PORT: 8787
+    restart: unless-stopped
